@@ -5,6 +5,8 @@ import (
 	"strconv"
 )
 
+/**************************************************************************/
+
 type PriceCode int
 
 const (
@@ -18,65 +20,80 @@ type Movie struct {
 	PriceCode PriceCode
 }
 
+/**************************************************************************/
+
 type Rental struct {
 	Movie      *Movie
 	DaysRented int
 }
 
-type Customer struct {
-	name    string
-	rentals []*Rental
-	total float64
-	points int
-}
-
-func (this *Customer) Add(rental *Rental) {
-	this.rentals = append(this.rentals, rental)
-}
-
-func (this *Customer) Statement() string {
-	result := "Rental Record for " + this.name + "\n"
-
-	for i := 0; i < len(this.rentals); i++ {
-		amt := 0.0
-		r := this.rentals[i]
-
-		// determine the amount for each line
-		switch r.Movie.PriceCode {
-		case RegularMovie:
-			amt += 2
-			if r.DaysRented > 2 {
-				amt += (float64)(r.DaysRented-2) * 1.5
-			}
-		case NewRelease:
-			amt += (float64)(r.DaysRented * 3)
-		case ChildrensMovie:
-			amt += 1.5
-			if r.DaysRented > 3 {
-				amt += (float64)(r.DaysRented-3) * 1.5
-			}
+func (rental *Rental) determineAmount() (amount float64) {
+	switch rental.Movie.PriceCode {
+	case RegularMovie:
+		amount += 2
+		if rental.DaysRented > 2 {
+			amount += (float64)(rental.DaysRented-2) * 1.5
 		}
-
-		this.points++
-
-		if r.Movie.PriceCode == NewRelease && r.DaysRented > 1 {
-			this.points++
+	case NewRelease:
+		amount += (float64)(rental.DaysRented * 3)
+	case ChildrensMovie:
+		amount += 1.5
+		if rental.DaysRented > 3 {
+			amount += (float64)(rental.DaysRented-3) * 1.5
 		}
-
-		result += "\t" + r.Movie.Title + "\t" + fmt.Sprint(amt) + "\n"
-		this.total += amt
 	}
-
-	result += "You owed " + fmt.Sprint(this.total) + "\n"
-	result += "You earned " + strconv.Itoa(this.points) + " frequent renter points\n"
-
-	return result
+	return amount
 }
 
-func (this *Customer) AmountOwed() float64 {
+func (rental *Rental) determinePoints() int {
+	if rental.Movie.PriceCode == NewRelease && rental.DaysRented > 1 {
+		return 2
+	} else {
+		return 1
+	}
+}
+
+/**************************************************************************/
+
+type RentalStatement struct {
+	name   string
+	total  float64
+	points int
+	body   string
+}
+
+func NewStatement(name string) *RentalStatement {
+	return &RentalStatement{name: name}
+}
+
+func (this *RentalStatement) makeHeader() string {
+	return "Rental Record for " + this.name + "\n"
+}
+
+func (this *RentalStatement) Include(rental *Rental) {
+	amount := rental.determineAmount()
+	this.total += amount
+	this.points += rental.determinePoints()
+	this.body += formatStatementLine(rental, amount)
+}
+
+func formatStatementLine(rental *Rental, amount float64) string {
+	return "\t" + rental.Movie.Title + "\t" + fmt.Sprint(amount) + "\n"
+}
+
+func (this *RentalStatement) FormatStatement() string {
+	return this.makeHeader() + this.body + this.makeFooter()
+}
+
+func (this *RentalStatement) makeFooter() string {
+	return "You owed " + fmt.Sprint(this.total) + "\n" +
+		"You earned " + strconv.Itoa(this.points) + " frequent renter points\n"
+}
+
+func (this *RentalStatement) AmountOwed() float64 {
 	return this.total
 }
 
-func (this *Customer) PointsEarned() int {
+func (this *RentalStatement) PointsEarned() int {
 	return this.points
 }
