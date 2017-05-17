@@ -26,6 +26,8 @@ type Rental struct {
 type Customer struct {
 	name    string
 	rentals []*Rental
+	total float64
+	points int
 }
 
 func (this *Customer) Add(rental *Rental) {
@@ -33,8 +35,6 @@ func (this *Customer) Add(rental *Rental) {
 }
 
 func (this *Customer) Statement() string {
-	total := 0.0
-	points := 0
 	result := "Rental Record for " + this.name + "\n"
 
 	for i := 0; i < len(this.rentals); i++ {
@@ -57,18 +57,26 @@ func (this *Customer) Statement() string {
 			}
 		}
 
-		points++
+		this.points++
 
 		if r.Movie.PriceCode == NewRelease && r.DaysRented > 1 {
-			points++
+			this.points++
 		}
 
 		result += "\t" + r.Movie.Title + "\t" + fmt.Sprint(amt) + "\n"
-		total += amt
+		this.total += amt
 	}
 
-	result += "You owed " + fmt.Sprint(total) + "\n"
-	result += "You earned " + strconv.Itoa(points) + " frequent renter points\n"
+	result += "You owed " + fmt.Sprint(this.total) + "\n"
+	result += "You earned " + strconv.Itoa(this.points) + " frequent renter points\n"
 
 	return result
+}
+
+func (this *Customer) AmountOwed() float64 {
+	return this.total
+}
+
+func (this *Customer) PointsEarned() int {
+	return this.points
 }
